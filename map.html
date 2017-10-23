@@ -1,0 +1,105 @@
+@()(implicit messages: Messages, wja: WebJarAssets)
+@helper.base {
+  <style>
+    #map { height: 100%; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    #pac-input, #pac-input-to {
+      background-color: #fff;
+      font-family: Roboto;
+      font-size: 15px;
+      font-weight: 300;
+      margin-left: 12px;
+      padding: 0 11px 0 13px;
+      text-overflow: ellipsis;
+      width: 400px;
+    }
+  </style>
+} {
+
+  <input id="pac-input" class="controls" type="text" placeholder="From ...">
+  <input id="pac-input-to" class="controls" type="text" placeholder="To ...">
+  <div id="map"></div>
+  <script>
+    function initAutocomplete() {
+
+      var currentLocation = { lat: 10.318935, lng: 123.9019666 };
+
+      var map = new google.maps.Map(document.getElementById('map'), {
+        center: currentLocation,
+        zoom: 16,
+        units: 'metric'
+      });
+
+      var directionsDisplay = new google.maps.DirectionsRenderer({
+        map: map
+      });
+
+      var originInput = document.getElementById('pac-input'),
+          destinationInput = document.getElementById('pac-input-to');
+
+
+      var origin = new google.maps.places.SearchBox(originInput),
+          destination = new google.maps.places.SearchBox(destinationInput);
+
+      // Bias the SearchBox results towards current map's viewport.
+      map.addListener('bounds_changed', function() {
+        origin.setBounds(map.getBounds());
+        destination.setBounds(map.getBounds());
+      });
+
+      var markers = [];
+
+      origin.addListener('places_changed', function() {
+        var places = origin.getPlaces();
+        places.forEach( function(place) {
+          currentLocation = place.geometry.location
+        })
+
+      })
+
+      destination.addListener('places_changed', function() {
+        var places = destination.getPlaces();
+
+        if (places.length == 0) return;
+
+        // For each place, get the icon, name and location.
+        var bounds = new google.maps.LatLngBounds();
+
+        places.forEach( function(place) {
+
+          if (!place.geometry) {
+            console.log("Returned place contains no geometry");
+            return;
+          }
+
+          var request = {
+            destination: place.geometry.location,
+            origin: currentLocation,
+            travelMode: 'DRIVING'
+          };
+
+          // Pass the directions request to the directions service.
+          var directionsService = new google.maps.DirectionsService();
+          directionsService.route(request, function(response, status) {
+            if (status == 'OK')
+              directionsDisplay.setDirections(response); // Display the route on the map.
+          });
+
+          if (place.geometry.viewport)
+            bounds.union(place.geometry.viewport);
+          else
+            bounds.extend(place.geometry.location);
+        });
+
+        map.fitBounds(bounds);
+      });
+    }
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXbU9hVAbFCxWneMyLlylvRvQRpvsK7hA&libraries=places&callback=initAutocomplete" async defer></script>
+}
